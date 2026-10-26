@@ -14,7 +14,7 @@ A small Django + Django REST Framework backend with a GitHub Actions pipeline.
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
+.venv\Scripts\activate
 pip install -r requirements-dev.txt
 python manage.py migrate
 python manage.py runserver
