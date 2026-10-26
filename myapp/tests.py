@@ -7,3 +7,8 @@ class HelloViewTests(TestCase):
         response = self.client.get(reverse("home"))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content.decode(), "Hello, World!")
+
+    def test_about_page(self):
+        response = self.client.get(reverse("about"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content.decode(), "About page")

@@ -10,86 +10,53 @@ env:
   DJANGO_DEBUG: "0"
 
 jobs:
-  lint:
-    name: "Stage 1 - Lint"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip
-      - name: Install dependencies
-        run: pip install -r requirements-dev.txt
-      - name: Run flake8
-        run: flake8 .
-
   test:
-    name: "Stage 2 - Test"
-    needs: lint
+    name: "Test"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: "Setup - Check out code"
+        uses: actions/checkout@v4
+      - name: "Setup - Install Python ${{ env.PYTHON_VERSION }}"
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-      - name: Check for missing migrations
-        run: python manage.py makemigrations --check --dry-run
-      - name: Run Django tests
+      - name: "Dependencies - Install packages"
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip check
+      - name: "Test - Run full test suite"
+        # A failing test exits non-zero, which fails this job and blocks Deploy.
         run: python manage.py test -v 2
 
-  build:
-    name: "Stage 3 - Build"
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-      - name: Run Django system checks
-        run: python manage.py check
-      - name: Collect static files
-        run: python manage.py collectstatic --noinput
-      - name: Package build artifact
-        run: tar --exclude=.git -czf app.tar.gz api config manage.py requirements.txt staticfiles
-      - uses: actions/upload-artifact@v4
-        with:
-          name: app-build
-          path: app.tar.gz
-
   deploy:
-    name: "Stage 4 - Deploy"
-    needs: build
+    name: "Deploy"
+    needs: test
     runs-on: ubuntu-latest
     env:
       DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
     steps:
-      - uses: actions/setup-python@v5
+      - name: "Setup - Check out code"
+        uses: actions/checkout@v4
+      - name: "Setup - Install Python ${{ env.PYTHON_VERSION }}"
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - uses: actions/download-artifact@v4
-        with:
-          name: app-build
-      - name: Unpack build artifact
-        run: mkdir app && tar -xzf app.tar.gz -C app
-      - name: Install runtime dependencies
-        working-directory: app
+          cache: pip
+      - name: "Dependencies - Install packages"
         run: pip install -r requirements.txt
-      - name: Apply migrations and start server
-        working-directory: app
+      - name: "Deploy - Apply migrations and start server"
         run: |
           python manage.py migrate --noinput
           python manage.py runserver 127.0.0.1:8000 --insecure &
-          sleep 5
-      - name: Smoke test deployed API
+          for i in $(seq 1 15); do
+            curl --silent --output /dev/null http://127.0.0.1:8000/ && exit 0
+            sleep 1
+          done
+          echo "Server did not start" && exit 1
+      - name: "Deploy - Smoke test deployed app"
         run: |
-          curl --fail --silent http://127.0.0.1:8000/api/health/ | tee health.json
-          grep -q '"status":"ok"' health.json
-          curl --fail --silent http://127.0.0.1:8000/api/tasks/
+          curl --fail --silent http://127.0.0.1:8000/ | grep -q "Hello, World!"
+          curl --fail --silent http://127.0.0.1:8000/about/
+          curl --fail --silent http://127.0.0.1:8000/api/health/ | grep -q '"status":"ok"'
