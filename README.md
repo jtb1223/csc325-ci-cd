@@ -6,8 +6,8 @@ A small Django + Django REST Framework backend with a GitHub Actions pipeline.
 
 | Path | Description |
 | --- | --- |
-| `/` | Home page, returns `Hello, World!` |
-| `/about/` | About page, returns `About page` |
+| `/` | Home page, shows `Hello, World!` and a button to the About page |
+| `/about/` | About page, with an animated cow GIF as the background |
 
 ## API
 
