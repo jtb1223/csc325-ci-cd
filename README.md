@@ -2,6 +2,13 @@
 
 A small Django + Django REST Framework backend with a GitHub Actions pipeline.
 
+## Pages
+
+| Path | Description |
+| --- | --- |
+| `/` | Home page, returns `Hello, World!` |
+| `/about/` | About page, returns `About page` |
+
 ## API
 
 | Method | Path | Description |
@@ -20,17 +27,20 @@ python manage.py migrate
 python manage.py runserver
 ```
 
+Then open <http://127.0.0.1:8000/>.
+
 ## Tests
 
 ```bash
-python manage.py test
+python manage.py test -v 2
 ```
 
 ## Pipeline
 
 `.github/workflows/csc325_ci_cd.yml` runs on every push to `main`:
 
-1. **Lint**: flake8
-2. **Test**: migration check and Django tests
-3. **Build**: system checks, collectstatic, packages the app as an artifact
-4. **Deploy**: unpacks the artifact, migrates, starts the server, and smoke-tests the API
+1. **Setup**: checks out the code and installs Python 3.12
+2. **Dependencies**: installs `requirements.txt` and runs `pip check`
+3. **Test**: runs the full Django test suite; a failing test fails the pipeline
+4. **Deploy**: runs only after Test passes (`needs: test`); migrates, starts the server, and
+   smoke-tests `/`, `/about/` and `/api/health/`
