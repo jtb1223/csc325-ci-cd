@@ -36,6 +36,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+      # Placeholder until the app is hosted publicly (e.g. on Render).
+      PUBLIC_URL: https://csc325-ci-cd.onrender.com
     steps:
       - name: "Setup - Check out code"
         uses: actions/checkout@v4
@@ -60,3 +62,7 @@ jobs:
           curl --fail --silent http://127.0.0.1:8000/ | grep -q "Hello, World!"
           curl --fail --silent http://127.0.0.1:8000/about/
           curl --fail --silent http://127.0.0.1:8000/api/health/ | grep -q '"status":"ok"'
+      - name: "Deploy - Public URL"
+        run: |
+          echo "Deployed app available at: ${{ env.PUBLIC_URL }}"
+          echo "### Deployed app: ${{ env.PUBLIC_URL }}" >> "$GITHUB_STEP_SUMMARY"
